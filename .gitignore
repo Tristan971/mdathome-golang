@@ -1,3 +1,5 @@
 # Ignore build directory & single build artifact
 build/
 mdathome-golang
+log
+.idea

@@ -15,6 +15,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/lflare/mdathome-golang/pkg/diskcache"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var clientSettings = ClientSettings{
@@ -229,6 +230,7 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 	totalTime := time.Since(startTime).Milliseconds()
 	w.Header().Set("X-Time-Taken", strconv.Itoa(int(totalTime)))
 	log.Printf("Request for %s - %s - %s completed in %dms", sanitizedURL, r.RemoteAddr, r.Header.Get("Referer"), totalTime)
+	recordRequest(ok, float64(totalTime))
 }
 
 // ShrinkDatabase initialises and shrinks the MD@Home database
@@ -266,6 +268,9 @@ func StartServer() {
 	)
 	defer cache.Close()
 
+	// Prepare metrics counters
+	initMetrics()
+
 	// Prepare upstream client
 	tr := &http.Transport{
 		MaxIdleConns:    10,
@@ -295,6 +300,7 @@ func StartServer() {
 	r := mux.NewRouter()
 	r.HandleFunc("/{image_type}/{chapter_hash}/{image_filename}", requestHandler)
 	r.HandleFunc("/{token}/{image_type}/{chapter_hash}/{image_filename}", requestHandler)
+	r.Handle("/metrics", promhttp.Handler())
 	http.Handle("/", r)
 
 	// Start proxy server
