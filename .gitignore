@@ -2,4 +2,6 @@
 build/
 mdathome-golang
 log
+cache
 .idea
+settings.json
