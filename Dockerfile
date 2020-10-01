@@ -1,18 +1,24 @@
-FROM fedora:33
+FROM fedora:33 as builder
 
 RUN dnf makecache \
   && dnf install -y \
-    dumb-init \
-    htop \
-    procps-ng \
-    wget \
-  && dnf clean all
+    golang \
+    make \
+    upx
 
-ARG RELEASE
+RUN dnf groupinstall -y "Development Tools"
+
+ADD . /mangahome
+WORKDIR /mangahome
+
+RUN make
+
+FROM fedora:33
+
+RUN dnf makecache && dnf install -y dumb-init && dnf clean all
 
 WORKDIR /mangahome
-RUN curl -Sso mdgo https://github.com/lflare/mdathome-golang/releases/download/v${RELEASE}/mdathome-${RELEASE}-linux_amd64
-RUN chmod -v +x mdgo
+COPY --from=builder /mangahome/mdathome-golang /mangahome/mdathome-golang
 
-ENTRYPOINT [ "dumb-init", "--" ]
-CMD [ "/mangahome/mdgo" ]
+ENTRYPOINT ["dumb-init", "--rewrite", "15:2", "--"]
+CMD ["/mangahome/mdathome-golang"]
